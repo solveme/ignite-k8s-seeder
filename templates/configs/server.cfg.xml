@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="
+        http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/util
+        http://www.springframework.org/schema/util/spring-util.xsd">
+
+    <bean id="ignite.properties" class="org.springframework.beans.factory.config.MethodInvokingFactoryBean">
+        <property name="targetObject" value="#{@systemProperties}"/>
+        <property name="targetMethod" value="putAll"/>
+        <property name="arguments">
+            <util:properties>
+                <prop key="java.net.preferIPv4Stack">true</prop>
+                <prop key="IGNITE_PERFORMANCE_SUGGESTIONS_DISABLED">true</prop>
+                <prop key="IGNITE_LOG_CLASSPATH_CONTENT_ON_STARTUP">false</prop>
+                <prop key="IGNITE_UPDATE_NOTIFIER">false</prop>
+                <prop key="IGNITE_QUIET">#{systemProperties['IGNITE_QUIET']?:'false'}</prop>
+            </util:properties>
+        </property>
+    </bean>
+
+    <bean depends-on="ignite.properties" class="org.apache.ignite.configuration.IgniteConfiguration">
+        <property name="workDirectory" value="#{systemProperties['IGNITE_WORK_DIR']?:'/tmp/ignite/work'}"/>
+        <property name="shutdownPolicy" value="GRACEFUL" />
+
+        <property name="discoverySpi">
+            <bean class="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi">
+                <property name="ipFinder">
+                    <bean class="org.apache.ignite.spi.discovery.tcp.ipfinder.kubernetes.TcpDiscoveryKubernetesIpFinder">
+                        <constructor-arg>
+                            <bean class="org.apache.ignite.kubernetes.configuration.KubernetesConnectionConfiguration">
+                                <property name="namespace" value="${NAMESPACE}" />
+                                <property name="serviceName" value="${DISCOVERY_SERVICE}" />
+                            </bean>
+                        </constructor-arg>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="dataStorageConfiguration">
+            <bean class="org.apache.ignite.configuration.DataStorageConfiguration">
+                <property name="defaultDataRegionConfiguration">
+                    <bean class="org.apache.ignite.configuration.DataRegionConfiguration">
+                        <property name="name" value="default"/>
+                        <property name="initialSize" value="#{1L * 1024 * 1024 * 1024}"/>
+                        <property name="maxSize" value="#{1L * 1024 * 1024 * 1024}"/>
+                        <property name="persistenceEnabled" value="true"/>
+                        <property name="metricsEnabled" value="true"/>
+                    </bean>
+                </property>
+            </bean>
+        </property>
+
+        <property name="pluginConfigurations">
+            <list>
+                <bean id="gg-base.cfg" abstract="true" class="org.gridgain.grid.configuration.GridGainConfiguration">
+                    <property name="licenseUrl" value="/etc/gridgain/gg.license.xml"/>
+                    <property name="rollingUpdatesEnabled" value="true"/>
+                </bean>
+            </list>
+        </property>
+
+        <property name="gridLogger">
+            <bean id="logger-log4j" class="org.apache.ignite.logger.log4j2.Log4J2Logger">
+                <constructor-arg type="java.lang.String" value="/etc/gridgain/log4j2-config.xml"/>
+            </bean>
+        </property>
+    </bean>
+
+</beans>

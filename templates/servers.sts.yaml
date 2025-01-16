@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  # Cluster name.
+  name: ${CLUSTER}
+  namespace: ${NAMESPACE}
+spec:
+  # The initial number of pods to be started by Kubernetes.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ${APP}
+  template:
+    metadata:
+      labels:
+        app: ${APP}
+    spec:
+      serviceAccountName: ${ACCOUNT}
+      terminationGracePeriodSeconds: 60 # Time to wait before moving from a TERM signal to the pod's main process to a KILL signal.
+      containers:
+      - name: ignite-node
+        image: ${IMAGE}
+        env:
+        - name: OPTION_LIBS
+          value: ignite-kubernetes,ignite-rest-http,ignite-log4j2
+        - name: IGNITE_QUIET
+          value: "false"
+        - name: IGNITE_WORK_DIR
+          value: "/opt/gridgain/work"
+        - name: JVM_OPTS
+          value: "-server -Djava.net.preferIPv4Stack=true -XX:+UseG1GC -XX:+ScavengeBeforeFullGC -DIGNITE_WORK_DIR=/opt/gridgain/work"
+          # Useful flags/properties:
+          # -Djdk.tls.client.protocols=TLSv1.2      useful in case of JDK11 based images tat can expirience troubles with TLS1.3
+          # -Djavax.net.debug=all                   useful in case of SSL/TLS related problems with nodes discovery via k8s API
+        - name: IGNITE_DUMP_THREADS_ON_FAILURE
+          value: "true"
+        - name: CONFIG_URI
+          value: file:///etc/gridgain/servers.cfg.xml
+        - name: IGNITE_OVERRIDE_CONSISTENT_ID  
+          valueFrom:  
+            fieldRef:  
+              fieldPath: metadata.name
+        ports:
+        # Ports to open.
+        - containerPort: 47100 # communication SPI port
+        - containerPort: 47500 # discovery SPI port
+        - containerPort: 49112 # dafault JMX port
+        - containerPort: 10800 # thin clients/JDBC driver port
+        - containerPort: 8080  # REST API
+        - containerPort: 8787  # Java debug
+        volumeMounts:
+        - mountPath: /etc/gridgain
+          name: config-vol
+      volumes:
+      - name: config-vol
+        configMap:
+          name: ${CONFIG_MAP}

@@ -1,0 +1,10 @@
+# List of variables that we want to be used in template imterpolation
+# They will be passed as envsubst SHELL-FORMAT
+$IMAGE
+$NAMESPACE
+$APP
+$DISCOVERY_SERVICE
+$ACCOUNT
+$CLUSTER_ROLE
+$CLUSTER_ROLE_BIND
+$CONFIG_MAP

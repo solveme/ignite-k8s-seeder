@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<Configuration monitorInterval="60">
+
+    <Properties>
+        <Property name="basicLayout">%d{ISO8601} %-5p [%t] [%c{1.}]%notEmpty{[%markerSimpleName]} %m%n</Property>
+        <Property name="logFolder">$${sys:IGNITE_LOG_DIR:-$${sys:IGNITE_WORK_DIR:-$${sys:IGNITE_HOME:-.}/work}/log}</Property>
+        <Property name="appLogFilename">app</Property>
+        <Property name="igniteLogFilename">${sys:appId}-${sys:nodeId}</Property>
+    </Properties>
+
+    <Appenders>
+        <Console name="CONSOLE" target="SYSTEM_OUT">
+            <PatternLayout pattern="${basicLayout}"/>
+            <ThresholdFilter level="ERROR" onMatch="DENY" onMismatch="ACCEPT"/>
+        </Console>
+
+        <Console name="CONSOLE_ERR" target="SYSTEM_ERR">
+            <PatternLayout pattern="${basicLayout}"/>
+        </Console>
+
+        <RollingFile name="Application"
+                     fileName="${logFolder}/${appLogFilename}.log"
+                     filePattern="${logFolder}/${appLogFilename}-%i-%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="${basicLayout}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="6" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="10 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!--
+        Router appender allows us to use same configuration to different instances, or to same instances which was
+        restarted multiple times. Eventually we will get following log files:
+
+        /logs
+           |__ ignite-1a.log   <- From node A running on current physical host
+           |__ ignite-1b.log   <- Also from node A, but node UUID after restart thus creating a new file
+           |__ ignite-2a.log   <- From node B running on same physical host
+
+        -->
+        <Routing name="FILE">
+            <Routes>
+                <!-- Next script requires java property: log4j2.Script.enableLanguages=javascript
+                <Script name="RoutingInit" language="JavaScript">
+                    <![CDATA[
+                    java.lang.System.getProperty("nodeId", "app");
+                ]]>
+                </Script>
+                -->
+                <Route ref="Application" key="app"/>
+                <Route>
+                    <RollingFile name="IgniteNodes"
+                                 fileName="${logFolder}/${igniteLogFilename}.log"
+                                 filePattern="${logFolder}/${igniteLogFilename}-%i-%d{yyyy-MM-dd}.log.gz">
+                        <PatternLayout pattern="${basicLayout}"/>
+                        <Policies>
+                            <TimeBasedTriggeringPolicy interval="6" modulate="true"/>
+                            <SizeBasedTriggeringPolicy size="10 MB"/>
+                        </Policies>
+                    </RollingFile>
+                </Route>
+            </Routes>
+        </Routing>
+
+    </Appenders>
+
+    <Loggers>
+        <!--
+        <Logger name="org.apache.ignite" level=DEBUG/>
+        -->
+
+        <Logger name="org.gridgain.internal.h2.table.Table" level="DEBUG">
+            <AppenderRef ref="CONSOLE" level="DEBUG"/>
+        </Logger>
+
+        <!--
+            Uncomment to disable courtesy notices, such as SPI configuration
+            consistency warnings.
+        -->
+        <!--
+        <Logger name="org.apache.ignite.CourtesyConfigNotice" level=OFF/>
+        -->
+
+        <Logger name="org.springframework" level="WARN"/>
+        <Logger name="org.eclipse.jetty" level="WARN"/>
+        <Logger name="org.glassfish.grizzly" level="WARN"/>
+
+        <!--
+        <Logger name="org.apache.ignite.spi.discovery.tcp.ClientImpl" level="DEBUG"/>
+        <Logger name="org.apache.ignite.spi.discovery.tcp.TcpDiscoverySpi" level="DEBUG"/>
+        -->
+
+        <Logger name="org.apache.ignite.internal.managers.encryption" level="DEBUG"/>
+
+        <Logger name="org.gridgain.control.springframework" level="WARN"/>
+
+        <Logger name="org.gridgain.grid.internal.processors.cache.database.snapshot.GridCacheSnapshotManager" level="WARN"/>
+        <Logger name="org.gridgain.grid.internal.processors.security.GridEntSecurityProcessor" level="WARN"/>
+
+        <!--
+        Avoid warnings about failed bind attempt when multiple nodes running on the same host.
+        -->
+        <Logger name="org.eclipse.jetty.util.log" level="ERROR"/>
+        <Logger name="org.eclipse.jetty.util.component" level="ERROR"/>
+
+        <Logger name="com.amazonaws" level="WARN"/>
+
+        <Root level="INFO">
+            <AppenderRef ref="CONSOLE" level="DEBUG"/>
+            <AppenderRef ref="CONSOLE_ERR" level="ERROR"/>
+            <AppenderRef ref="FILE" level="INFO"/>
+        </Root>
+    </Loggers>
+</Configuration>

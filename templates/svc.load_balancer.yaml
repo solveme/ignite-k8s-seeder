@@ -1,10 +1,8 @@
 apiVersion: v1
 kind: Service
 metadata:
-  # The name must be equal to KubernetesConnectionConfiguration.serviceName
-  name: ${SERVICE}
-  # The name must be equal to KubernetesConnectionConfiguration.namespace
-  namespace: ${NAMESPACE}
+  name: ${APP}-lb-svc       # Must be equal to KubernetesConnectionConfiguration.serviceName
+  namespace: ${NAMESPACE}   # Must be equal to KubernetesConnectionConfiguration.namespace
   labels:
     app: ${APP}
 spec:

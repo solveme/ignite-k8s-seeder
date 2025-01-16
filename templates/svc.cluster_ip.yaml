@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${APP}-cip-svc
+  namespace: ${NAMESPACE}
+  labels:
+    app: ${APP}
+spec:
+  type: ClusterIP
+  ports:
+    - name: rest
+      port: 8080
+      targetPort: 8080
+    - name: thin
+      port: 10800
+      targetPort: 10800
+    - name: control
+      port: 11211
+      targetPort: 11211
+  selector:
+    # Must be equal to the label set for pods.
+    app: ${APP}
